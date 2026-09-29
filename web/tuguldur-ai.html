@@ -1,0 +1,497 @@
+<title>Nyamka хайлт</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=PT+Serif:wght@700&display=swap">
+<style>
+  /* Layout: нэг багана, дээр нь хайлтын талбар, доор нь ангилал ба үр дүн */
+  :root {
+    --bg: #f4f6fa; --surface: #ffffff; --fg: #17203a; --muted: #5d6680;
+    --line: #dde2ec; --accent: #1f4fb8; --accent-fg: #ffffff; --mark: #ffe08a; --chip: #e8eefa;
+    --display: "PT Serif", Georgia, serif;
+    --body: "PT Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10141f; --surface: #181e2d; --fg: #e8ebf3; --muted: #9aa3ba;
+      --line: #2a3246; --accent: #7fa4ff; --accent-fg: #0d1426; --mark: #6a5516; --chip: #222b40;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10141f; --surface: #181e2d; --fg: #e8ebf3; --muted: #9aa3ba;
+    --line: #2a3246; --accent: #7fa4ff; --accent-fg: #0d1426; --mark: #6a5516; --chip: #222b40;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font: 17px/1.55 var(--body); }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; display: grid; gap: 18px; }
+  h1 { font: 700 34px/1.1 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  h1 span { color: var(--accent); }
+  .lead { margin: 6px 0 0; color: var(--muted); }
+  .search { position: relative; }
+  #q { width: 100%; padding: 15px 16px; font: 18px var(--body); color: var(--fg);
+       background: var(--surface); border: 2px solid var(--line); border-radius: 14px; outline: none; }
+  #q:focus-visible { border-color: var(--accent); }
+  .tips { display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px; color: var(--muted); align-items: center; }
+  .tip { font: inherit; font-size: 14px; background: var(--chip); color: var(--fg); border: 0;
+         border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+  .tip:focus-visible, .chip:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+          padding: 5px 12px; border-radius: 999px; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+  .meta { color: var(--muted); font-size: 15px; display: grid; gap: 4px; }
+  .dym button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; font-weight: 700; text-decoration: underline; }
+  .results { display: grid; gap: 10px; }
+  .hit { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .hit h2 { font: 700 19px/1.3 var(--display); margin: 0 0 4px; }
+  .hit p { margin: 0; overflow-wrap: anywhere; }
+  .hit .info { margin-top: 8px; font-size: 13.5px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  summary { cursor: pointer; font-weight: 700; }
+  form { display: grid; gap: 8px; margin-top: 12px; }
+  form input, form textarea { font: inherit; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--fg); width: 100%; }
+  .btn { font: inherit; font-weight: 700; border: 0; background: var(--accent); color: var(--accent-fg);
+         padding: 10px 16px; border-radius: 10px; cursor: pointer; justify-self: start; }
+  .status { font-size: 14px; color: var(--muted); }
+  .search { display: flex; gap: 8px; }
+  .search #q { flex: 1; min-width: 0; }
+  .ask { flex: none; padding-inline: 18px; border-radius: 14px; }
+  .ai { background: var(--surface); border: 2px solid var(--accent); border-radius: 14px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+  .ai-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ai-name { font: 700 18px var(--display); color: var(--accent); }
+  .ai-badge { font-size: 12px; color: var(--muted); }
+  .ai-stop { margin-left: auto; font: inherit; font-size: 14px; background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+  .turn { display: grid; gap: 6px; min-width: 0; }
+  .turn + .turn { border-top: 1px solid var(--line); padding-top: 10px; }
+  .turn .you { font-weight: 700; }
+  .answer { overflow-wrap: anywhere; }
+  .answer p, .answer ul { margin: 0 0 8px; }
+  .answer ul { padding-left: 20px; }
+  .thinking { color: var(--muted); font-style: italic; }
+  .followup { display: flex; gap: 8px; }
+  .followup input { flex: 1; min-width: 0; font: inherit; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
+  .note { font-size: 13px; color: var(--muted); }
+</style>
+
+<main>
+  <header>
+    <h1><span>Nyamka</span> хайлт</h1>
+    <p class="lead">Юу ч асуугаад «Асуух» дарахад TuguldurAI хариулна. Бичиж байх зуур доор нь хадгалсан баримтуудаас хайна.</p>
+  </header>
+
+  <form class="search" id="searchForm">
+    <input id="q" type="search" placeholder="Жишээ нь: Эрдэнэс Тавантолгой компанийн талаар" autocomplete="off" aria-label="Хайх үг эсвэл асуулт" enterkeyhint="search">
+    <button class="btn ask" id="askBtn" type="submit">Асуух</button>
+  </form>
+
+  <section id="ai" class="ai" hidden aria-live="polite">
+    <div class="ai-head">
+      <span class="ai-name">TuguldurAI</span>
+      <span class="ai-badge">Claude дээр ажилладаг</span>
+      <button id="aiStop" class="ai-stop" type="button" hidden>Зогсоох</button>
+    </div>
+    <div id="aiTurns"></div>
+    <form id="followForm" class="followup" hidden>
+      <input id="followQ" placeholder="Нэмэлт асуулт асуух…" autocomplete="off" aria-label="Нэмэлт асуулт">
+      <button class="btn" type="submit">Илгээх</button>
+    </form>
+    <div class="note">Интернэтээс хайдаггүй, өөрийн мэдлэгээр хариулна. Сүүлийн үеийн мэдээ, тоо баримтыг шалгаж байгаарай.</div>
+  </section>
+
+  <div class="tips">
+    <span>Туршаад үзээрэй:</span>
+    <button class="tip" data-q="ном">ном</button>
+    <button class="tip" data-q="Хархорм">Хархорм (алдаатай)</button>
+    <button class="tip" data-q='"нийслэл хот"'>"нийслэл хот"</button>
+    <button class="tip" data-q="нийслэл -улаанбаатар">нийслэл -улаанбаатар</button>
+    <button class="tip" data-q="title:хаан">title:хаан</button>
+  </div>
+
+  <div id="chips" class="chips"></div>
+  <div id="meta" class="meta"></div>
+  <div id="results" class="results"></div>
+
+  <details>
+    <summary>Өөрийн баримт нэмэх</summary>
+    <form id="addForm">
+      <input id="f-title" name="title" placeholder="Гарчиг" required>
+      <input id="f-category" name="category" placeholder="Ангилал (жишээ нь: Соёл)">
+      <textarea id="f-body" name="body" rows="4" placeholder="Агуулга" required></textarea>
+      <button class="btn" type="submit">Нэмэх</button>
+      <div id="addStatus" class="status"></div>
+    </form>
+  </details>
+</main>
+
+<script>
+const SAMPLE = [
+  ["chinggis-khaan","Чингис хаан","Чингис хаан 1206 онд Их Монгол Улсыг байгуулжээ. Тэрээр нүүдэлчин овог аймгуудыг нэгтгэж, Их засаг хуулийг баталсан. Чингис хааны үед Монголын эзэнт гүрэн Азиас Европ хүртэл тэлжээ.","Түүх",["түүх","хаан","эзэнт гүрэн"]],
+  ["secret-history","Монголын нууц товчоо","Монголын нууц товчоо бол монголчуудын хамгийн эртний түүх, утга зохиолын дурсгал юм. Энэ номонд Чингис хааны удам угсаа, амьдрал, Их Монгол Улс байгуулагдсан түүхийг өгүүлдэг.","Түүх",["түүх","ном","утга зохиол"]],
+  ["karakorum","Хархорум хот","Хархорум бол Их Монгол Улсын нийслэл хот байв. Өгэдэй хааны үед хотыг бэхжүүлж, олон улсын худалдаа, соёлын төв болгосон. Одоо Эрдэнэзуу хийдийн ойролцоо туурь нь үлджээ.","Түүх",["түүх","хот","нийслэл"]],
+  ["ulaanbaatar","Улаанбаатар","Улаанбаатар бол Монгол Улсын нийслэл бөгөөд хамгийн том хот юм. Туул голын хөндийд оршдог. Улсын хүн амын бараг тал хувь нь нийслэлд амьдардаг.","Газарзүй",["хот","нийслэл"]],
+  ["khuvsgul","Хөвсгөл нуур","Хөвсгөл нуур бол Монгол Улсын хамгийн гүн цэнгэг устай нуур юм. Нуурын ус маш тунгалаг бөгөөд эргэн тойронд нь тайга ой, уул нуруу бий. Жуулчдын дуртай газар.","Газарзүй",["нуур","байгаль","аялал"]],
+  ["gobi","Говь цөл","Говь нь Монголын өмнөд хэсгийг эзэлдэг өргөн уудам нутаг юм. Говьд үлэг гүрвэлийн олдвор олноор олдсон. Хоёр бөхт тэмээ говийн бэлгэдэл амьтан.","Газарзүй",["байгаль","говь","аялал"]],
+  ["altai","Алтайн нуруу","Алтайн нуруу Монголын баруун хэсгээр сунаж тогтсон өндөр уулс юм. Мөнх цастай оргилууд, мөсөн гол, цасан ирвэс зэрэг ховор амьтантай.","Газарзүй",["уул","байгаль"]],
+  ["naadam","Үндэсний их баяр наадам","Наадам бол Монголын үндэсний их баяр юм. Эрийн гурван наадам буюу бөх, морь уралдаан, сур харваа наадмын гол төрлүүд. Наадам жил бүрийн зун болдог.","Соёл",["баяр","уламжлал","спорт"]],
+  ["tsagaan-sar","Цагаан сар","Цагаан сар бол сар шинийн баяр юм. Энэ үеэр монголчууд ахмадаа золгож, бууз хийж, гэр бүлээрээ цуглардаг. Цагаан сарын битүүн өдөр хуучин оноо үдэж шинэ оноо угтдаг.","Соёл",["баяр","уламжлал"]],
+  ["ger","Монгол гэр","Монгол гэр бол нүүдэлчдийн зөөврийн орон сууц юм. Гэрийг хана, унь, тооно, эсгийгээр бүтээдэг. Цөөн цагийн дотор буулгаж, дахин барьж болдог.","Соёл",["уламжлал","нүүдэлчин"]],
+  ["morin-khuur","Морин хуур","Морин хуур бол Монголын үндэсний хөгжмийн зэмсэг юм. Хуурын толгойг морины толгой хэлбэрээр сийлдэг. Морин хуурын урлагийг ЮНЕСКО-гийн биет бус соёлын өвд бүртгэсэн.","Соёл",["хөгжим","урлаг","уламжлал"]],
+  ["khoomii","Хөөмий","Хөөмий бол нэг хүн нэгэн зэрэг хоёр өөр авиа гаргадаг уламжлалт дуулах урлаг юм. Хөөмийг мөн ЮНЕСКО-гийн биет бус соёлын өвд бүртгэсэн.","Соёл",["хөгжим","урлаг"]],
+  ["mongol-script","Монгол бичиг","Монгол бичиг нь дээрээс доош босоо бичдэг уламжлалт үсэг юм. Олон зуун жилийн турш монголчуудын ном, судар, албан бичигт хэрэглэгдсээр ирсэн.","Соёл",["хэл","бичиг","ном"]],
+  ["search-engine","Хайлтын систем хэрхэн ажилладаг вэ","Хайлтын систем баримтуудыг урвуу индекс болгон хадгалдаг. Хэрэглэгч асуулга оруулахад систем тухайн үгс орсон баримтуудыг олж, BM25 зэрэг алгоритмаар хамааралтай байдлаар нь эрэмбэлдэг.","Технологи",["програмчлал","алгоритм","хайлт"]],
+  ["python","Python програмчлалын хэл","Python бол энгийн, уншихад хялбар програмчлалын хэл юм. Вэб хөгжүүлэлт, өгөгдлийн шинжилгээ, хиймэл оюун ухаан зэрэг олон салбарт хэрэглэдэг.","Технологи",["програмчлал","хэл"]],
+  ["ai","Хиймэл оюун ухаан","Хиймэл оюун ухаан нь компьютерт хүн шиг сурах, дүгнэх, хэл ойлгох чадвар олгох шинжлэх ухааны салбар юм. Машин сургалт нь түүний гол чиглэлүүдийн нэг.","Технологи",["алгоритм","шинжлэх ухаан"]],
+  ["library","Үндэсний номын сан","Монгол Улсын Үндэсний номын сан нь Улаанбаатар хотод байрладаг. Номын санд олон мянган хуучин ном, судар, гар бичмэл хадгалагддаг. Уншигчид номыг уншлагын танхимд уншиж болно.","Соёл",["ном","номын сан"]],
+  ["airag","Айраг","Айраг нь гүүний сүүг исгэж хийдэг уламжлалт ундаа юм. Зун намрын улиралд малчин айлууд айраг бэлтгэдэг. Наадмын үеэр айргаар дайлдаг заншилтай.","Соёл",["хоол","уламжлал"]],
+].map(([id, title, body, category, tags]) => ({ id, title, body, category, tags }));
+
+// ---------------- Хайлтын хөдөлгүүр (BM25F) ----------------
+const WEIGHTS = { title: 3, tags: 2, body: 1 };
+const STOPWORDS = new Set(["талаар","тухай","юу","вэ","бэ","уу","үү","юм","бол","нь","ба","болон","гэж","гэдэг","ямар","хэрхэн","яаж","хэн","хаана","хэзээ","яагаад","мэдээлэл","өгөөч","хэлээч"]);
+const K1 = 1.2, B = 0.75;
+const norm = (s) => s.normalize("NFC").toLowerCase();
+function tokenize(text) {
+  const out = []; let i = 0;
+  for (const m of String(text || "").matchAll(/[\p{L}\p{N}_]+/gu)) {
+    out.push({ text: norm(m[0]), pos: i++, start: m.index, end: m.index + m[0].length });
+  }
+  return out;
+}
+const fieldText = (v) => Array.isArray(v) ? v.join(" ") : (v == null ? "" : String(v));
+function editDistance(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]; let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] !== b[j - 1] ? 1 : 0));
+      rowMin = Math.min(rowMin, cur[j]);
+    }
+    if (rowMin > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+class SearchIndex {
+  constructor() { this.docs = new Map(); this.post = new Map(); this.len = new Map(); this.total = {}; this.count = {}; }
+  add(doc) {
+    this.docs.set(doc.id, doc);
+    const lengths = {};
+    for (const f in WEIGHTS) {
+      const toks = tokenize(fieldText(doc[f]));
+      if (!toks.length) continue;
+      lengths[f] = toks.length;
+      this.total[f] = (this.total[f] || 0) + toks.length;
+      this.count[f] = (this.count[f] || 0) + 1;
+      for (const t of toks) {
+        if (!this.post.has(t.text)) this.post.set(t.text, new Map());
+        const byDoc = this.post.get(t.text);
+        if (!byDoc.has(doc.id)) byDoc.set(doc.id, {});
+        (byDoc.get(doc.id)[f] ||= []).push(t.pos);
+      }
+    }
+    this.len.set(doc.id, lengths);
+  }
+  df(t) { return this.post.get(t)?.size || 0; }
+  idf(t) { const n = this.docs.size, d = this.df(t); return Math.log(1 + (n - d + 0.5) / (d + 0.5)); }
+  termScore(t, id, only) {
+    const entry = this.post.get(t)?.get(id); if (!entry) return 0;
+    let s = 0;
+    for (const f in entry) {
+      if (only && f !== only) continue;
+      const tf = entry[f].length, avg = this.total[f] / this.count[f] || 1, dl = this.len.get(id)[f] || 0;
+      s += WEIGHTS[f] * tf * (K1 + 1) / (tf + K1 * (1 - B + B * dl / avg));
+    }
+    return s * this.idf(t);
+  }
+  prefixTerms(p) {
+    const found = [];
+    for (const t of this.post.keys()) if (t.startsWith(p)) found.push(t);
+    return found.sort((a, b) => this.df(b) - this.df(a)).slice(0, 50);
+  }
+  fuzzyTerms(term) {
+    const max = term.length < 8 ? 1 : 2, out = new Map();
+    for (const t of this.post.keys()) { const d = editDistance(term, t, max); if (d <= max) out.set(t, d); }
+    return out;
+  }
+  expand(term) {
+    const out = new Map();
+    if (this.post.has(term)) out.set(term, 1);
+    if (term.length >= 2) for (const c of this.prefixTerms(term)) if (!out.has(c)) out.set(c, 0.5 + 0.4 * term.length / c.length);
+    if (!out.size && term.length >= 4) for (const [c, d] of this.fuzzyTerms(term)) out.set(c, 0.6 / d);
+    return out;
+  }
+  parse(q) {
+    const clauses = [];
+    const re = /(-)?(?:([\p{L}\p{N}_]+):)?(?:"([^"]*)"?|([^\s"]+))/gu;
+    for (const m of q.matchAll(re)) {
+      let [, neg, field, phrase, word] = m;
+      if (field && !(norm(field) in WEIGHTS)) { word = field + " " + (phrase ?? word); phrase = undefined; field = undefined; }
+      field = field ? norm(field) : null;
+      if (phrase !== undefined) {
+        const toks = tokenize(phrase);
+        if (toks.length > 1) { clauses.push({ terms: toks.map(t => t.text), offsets: toks.map(t => t.pos), phrase: true, neg: !!neg, field }); continue; }
+        word = phrase;
+      }
+      for (const t of tokenize(word)) clauses.push({ terms: [t.text], neg: !!neg, field });
+    }
+    return clauses;
+  }
+  evalClause(c, matched) {
+    const scores = new Map();
+    if (c.phrase) {
+      if (c.terms.some(t => !this.post.has(t))) return scores;
+      for (const id of this.post.get(c.terms[0]).keys()) {
+        if (!c.terms.every(t => this.post.get(t).has(id))) continue;
+        const first = this.post.get(c.terms[0]).get(id);
+        for (const f in first) {
+          if (c.field && f !== c.field) continue;
+          const others = c.terms.slice(1).map(t => new Set(this.post.get(t).get(id)[f] || []));
+          const hit = first[f].some(p => others.every((s, i) => s.has(p + c.offsets[i + 1] - c.offsets[0])));
+          if (hit) {
+            scores.set(id, 1.5 * c.terms.reduce((a, t) => a + this.termScore(t, id, c.field), 0));
+            if (matched) c.terms.forEach(t => addMatch(matched, id, t));
+            break;
+          }
+        }
+      }
+      return scores;
+    }
+    const exp = c.neg ? new Map(this.post.has(c.terms[0]) ? [[c.terms[0], 1]] : []) : this.expand(c.terms[0]);
+    for (const [cand, w] of exp) {
+      for (const [id, entry] of this.post.get(cand)) {
+        if (c.field && !(c.field in entry)) continue;
+        const s = w * this.termScore(cand, id, c.field);
+        if (s > (scores.get(id) || 0)) scores.set(id, s);
+        if (matched) addMatch(matched, id, cand);
+      }
+    }
+    return scores;
+  }
+  search(q, category) {
+    const t0 = performance.now();
+    const clauses = this.parse(q), neg = clauses.filter(c => c.neg);
+    let pos = clauses.filter(c => !c.neg);
+    // "талаар", "тухай", "вэ" зэрэг асуултын үгсийг хайлтаас хасна
+    const content = pos.filter(c => c.phrase || !STOPWORDS.has(c.terms[0]));
+    if (content.length) pos = content;
+    const matched = new Map(), results = pos.map(c => this.evalClause(c, matched));
+    let mode = "and", ids;
+    if (pos.length) {
+      ids = [...results[0].keys()].filter(id => results.every(r => r.has(id)));
+      if (!ids.length && pos.length > 1) { mode = "or"; ids = [...new Set(results.flatMap(r => [...r.keys()]))]; }
+    } else ids = (neg.length || category) ? [...this.docs.keys()] : [];
+    for (const c of neg) { const ex = this.evalClause(c, null); ids = ids.filter(id => !ex.has(id)); }
+    const facets = new Map();
+    for (const id of ids) { const cat = this.docs.get(id).category; if (cat) facets.set(cat, (facets.get(cat) || 0) + 1); }
+    if (category) ids = ids.filter(id => this.docs.get(id).category === category);
+    const score = new Map(ids.map(id => {
+      let s = results.reduce((a, r) => a + (r.get(id) || 0), 0);
+      if (mode === "or") s *= results.filter(r => r.has(id)).length / results.length;
+      return [id, s];
+    }));
+    ids.sort((a, b) => score.get(b) - score.get(a) || a.localeCompare(b));
+    return { total: ids.length, mode, facets, suggestion: this.didYouMean(q, pos),
+      hits: ids.map(id => ({ id, score: score.get(id), doc: this.docs.get(id), terms: matched.get(id) || new Set() })),
+      ms: (performance.now() - t0).toFixed(2) };
+  }
+  didYouMean(q, pos) {
+    const rep = new Map();
+    for (const c of pos) {
+      const t = c.terms[0];
+      if (c.phrase || this.post.has(t) || t.length < 4 || this.prefixTerms(t).length) continue;
+      const cands = [...this.fuzzyTerms(t)].sort((a, b) => a[1] - b[1] || this.df(b[0]) - this.df(a[0]));
+      if (cands.length) rep.set(t, cands[0][0]);
+    }
+    if (!rep.size) return null;
+    let out = "", cur = 0;
+    for (const tok of tokenize(q)) if (rep.has(tok.text)) { out += q.slice(cur, tok.start) + rep.get(tok.text); cur = tok.end; }
+    return out + q.slice(cur);
+  }
+}
+function addMatch(m, id, t) { if (!m.has(id)) m.set(id, new Set()); m.get(id).add(t); }
+
+function highlight(text, terms, win) {
+  const toks = tokenize(text);
+  let start = 0, end = toks.length;
+  if (win && toks.length > win) {
+    const hits = toks.map((t, i) => terms.has(t.text) ? i : -1).filter(i => i >= 0);
+    if (hits.length) start = Math.max(0, hits[0] - 5);
+    start = Math.min(start, toks.length - win); end = start + win;
+  }
+  const frag = document.createDocumentFragment();
+  const cs = start > 0 ? toks[start].start : 0, ce = end < toks.length ? toks[end - 1].end : text.length;
+  let cur = cs;
+  if (cs > 0) frag.append("…");
+  for (const t of toks.slice(start, end)) {
+    if (!terms.has(t.text)) continue;
+    frag.append(text.slice(cur, t.start));
+    const mk = document.createElement("mark"); mk.textContent = text.slice(t.start, t.end); frag.append(mk);
+    cur = t.end;
+  }
+  frag.append(text.slice(cur, ce));
+  if (ce < text.length) frag.append("…");
+  return frag;
+}
+
+// ---------------- Интерфэйс ----------------
+const STORE = "nyamka-user-docs";
+let userDocs = [];
+try { userDocs = JSON.parse(localStorage.getItem(STORE) || "[]"); } catch (e) { userDocs = []; }
+let index;
+function rebuild() { index = new SearchIndex(); [...SAMPLE, ...userDocs].forEach(d => index.add(d)); }
+rebuild();
+
+const $ = (id) => document.getElementById(id);
+const state = { q: "наадам", category: "" };
+$("q").value = state.q;
+const el = (tag, props = {}, kids = []) => { const n = Object.assign(document.createElement(tag), props); n.append(...[].concat(kids)); return n; };
+
+function render() {
+  const r = index.search(state.q, state.category);
+  const chips = $("chips"), meta = $("meta"), results = $("results");
+  chips.replaceChildren(); meta.replaceChildren(); results.replaceChildren();
+  const cats = [...r.facets].sort((a, b) => b[1] - a[1]);
+  if (state.category && !r.facets.has(state.category)) cats.push([state.category, 0]);
+  for (const [cat, n] of cats) {
+    const active = state.category === cat;
+    const b = el("button", { className: "chip", type: "button", textContent: `${cat} · ${n}` });
+    b.setAttribute("aria-pressed", active);
+    b.onclick = () => { state.category = active ? "" : cat; render(); };
+    chips.append(b);
+  }
+  if (r.suggestion) {
+    const b = el("button", { type: "button", textContent: r.suggestion });
+    b.onclick = () => { $("q").value = state.q = r.suggestion; render(); };
+    meta.append(el("div", { className: "dym" }, ["Та ", b, " гэж хайсан уу?"]));
+  }
+  if (!state.q.trim() && !state.category) {
+    results.append(el("div", { className: "empty", textContent: "Дээрх талбарт хайх үгээ бичнэ үү." }));
+    return;
+  }
+  let line = `${r.total} үр дүн · ${r.ms} мс`;
+  if (r.mode === "or") line += " · бүх үг зэрэг орсон баримт олдсонгүй, аль нэг нь орсныг харуулав";
+  meta.append(el("div", { textContent: line }));
+  if (!r.total) results.append(el("div", { className: "empty", textContent: "Хадгалсан баримтуудаас олдсонгүй. «Асуух» дарж TuguldurAI-аас асуугаарай." }));
+  for (const h of r.hits) {
+    const info = el("div", { className: "info" });
+    if (h.doc.category) info.append(el("span", { textContent: h.doc.category }));
+    if (h.doc.tags?.length) info.append(el("span", { textContent: "#" + h.doc.tags.join(" #") }));
+    info.append(el("span", { textContent: "оноо " + h.score.toFixed(2) }));
+    results.append(el("article", { className: "hit" }, [
+      el("h2", {}, highlight(h.doc.title, h.terms)),
+      el("p", {}, highlight(h.doc.body || "", h.terms, 30)),
+      info,
+    ]));
+  }
+}
+
+let timer;
+$("q").addEventListener("input", (e) => { clearTimeout(timer); timer = setTimeout(() => { state.q = e.target.value; render(); }, 120); });
+document.querySelectorAll(".tip").forEach(b => b.onclick = () => { $("q").value = state.q = b.dataset.q; state.category = ""; render(); });
+$("addForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const doc = { id: "user-" + Date.now(), title: $("f-title").value.trim(), body: $("f-body").value.trim(),
+                category: $("f-category").value.trim() || "Миний баримт", tags: [] };
+  userDocs.push(doc);
+  try { localStorage.setItem(STORE, JSON.stringify(userDocs)); } catch (err) {}
+  rebuild(); e.target.reset();
+  $("addStatus").textContent = `«${doc.title}» нэмэгдлээ. Одоо хайж үзээрэй.`;
+  render();
+});
+
+// ---------------- TuguldurAI ----------------
+const RULES = `Чи бол "TuguldurAI" — Nyamka хайлтын апп доторх туслах хиймэл оюун ухаан. Хэрэглэгчийн асуултад тодорхой, үнэн зөв, ойлгомжтой хариулна.
+- Асуултын хэлээр хариул (ихэвчлэн монгол хэлээр).
+- Эхлээд шууд хариултаа 1-2 өгүүлбэрээр өг, дараа нь шаардлагатай бол гол баримтуудыг "- " эхэлсэн жагсаалтаар нэм. Нийт 250 үгээс хэтрүүлэхгүй.
+- Хэрэглэгч ганц үг эсвэл нэр бичвэл түүний тухай товч танилцуулга өг.
+- Чи интернэтээс хайдаггүй. Сүүлийн үеийн тоо баримт, мэдээ өөрчлөгдсөн байж болзошгүй бол үүнийг товч дурд. Мэдэхгүй зүйлээ зохиож бүү хэл.
+- Доор "Аппын баримтууд" өгөгдвөл хамааралтай бол ашигла.`;
+
+let sample = null, turns = [], ctl = null;
+Promise.resolve(window.claude?.use?.("sample")).then((s) => { sample = s || null; if (!s) hideAI(); }, hideAI);
+function hideAI() { $("askBtn").hidden = true; $("ai").hidden = true; }
+
+function renderAnswer(node, text) {
+  // Энгийн markdown: догол мөр, "- " жагсаалт, **тод**
+  node.replaceChildren();
+  let list = null;
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line) { list = null; continue; }
+    const bullet = /^[-*•]\s+/.test(line);
+    const target = bullet ? (list ||= node.appendChild(el("ul"))) : (list = null, node.appendChild(el("p")));
+    const holder = bullet ? target.appendChild(el("li")) : target;
+    const body = bullet ? line.replace(/^[-*•]\s+/, "") : line.replace(/^#+\s*/, "");
+    body.split(/(\*\*[^*]+\*\*)/).forEach(part => {
+      if (/^\*\*[^*]+\*\*$/.test(part)) holder.append(el("strong", { textContent: part.slice(2, -2) }));
+      else if (part) holder.append(part);
+    });
+  }
+}
+
+const ERRORS = {
+  rate_limited: "Хэт олон асуулт асуулаа. Хэсэг хүлээгээд дахин оролдоно уу.",
+  session_expired: "Claude-д дахин нэвтэрнэ үү.",
+  refused: "Энэ асуултад хариулах боломжгүй. Өөрөөр асууж үзээрэй.",
+  empty_completion: "Хариулт ирсэнгүй. Асуултаа өөрөөр бичиж үзээрэй.",
+};
+
+async function ask(question, fresh) {
+  question = question.trim();
+  if (!question || !sample) return;
+  if (fresh) { turns = []; $("aiTurns").replaceChildren(); }
+  ctl?.abort();
+  ctl = new AbortController();
+  $("ai").hidden = false;
+  const turn = el("div", { className: "turn" });
+  if (!fresh) turn.append(el("div", { className: "you", textContent: question }));
+  const answer = el("div", { className: "answer" }, el("span", { className: "thinking", textContent: "TuguldurAI бодож байна…" }));
+  turn.append(answer);
+  $("aiTurns").append(turn);
+  $("aiStop").hidden = false;
+
+  const docs = index.search(question, "").hits.slice(0, 3)
+    .map(h => `• ${h.doc.title}: ${h.doc.body}`).join("\n");
+  const content = docs ? `${question}\n\nАппын баримтууд:\n${docs}` : question;
+  turns.push({ role: "user", content });
+  try {
+    const { text, truncated } = await sample([{ role: "user", content: RULES }, ...turns.slice(-8)], {
+      signal: ctl.signal, cache: false, onText: ({ text }) => renderAnswer(answer, text),
+    });
+    turns.push({ role: "assistant", content: text });
+    if (truncated) answer.append(el("div", { className: "note", textContent: "Хариулт таслагдсан. Илүү нарийн асууна уу." }));
+  } catch (e) {
+    turns.pop();
+    if (e.code === "not_granted" || e.code === "sampling_disabled" || e.code === "not_declared" || e.code === "capability_disabled") {
+      answer.replaceChildren(el("span", { className: "thinking", textContent: "TuguldurAI-г ашиглах зөвшөөрөл өгөөгүй байна. Хайлт хэвийн ажиллана." }));
+    } else if (e.code === "cancelled") {
+      if (e.text) renderAnswer(answer, e.text); else answer.replaceChildren(el("span", { className: "thinking", textContent: "Зогсоосон." }));
+    } else {
+      if (e.text) renderAnswer(answer, e.text); else answer.replaceChildren();
+      answer.append(el("div", { className: "note", textContent: ERRORS[e.code] || "Холболт тасарлаа. Дахин «Асуух» дарна уу." }));
+    }
+  } finally {
+    $("aiStop").hidden = true;
+    $("followForm").hidden = turns.length === 0;
+  }
+}
+
+$("searchForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  clearTimeout(timer);
+  state.q = $("q").value; render();
+  $("q").blur();
+  ask($("q").value, true);
+});
+$("followForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const q = $("followQ").value; $("followQ").value = "";
+  ask(q, false);
+});
+$("aiStop").onclick = () => ctl?.abort();
+render();
+</script>
