@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nyamka хайлт</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
+    --border: #e2e1dc; --accent: #2457c5; --mark: #ffe58a; --chip: #eef1f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151515; --surface: #1f1f1f; --text: #ececea; --muted: #9a9a95;
+      --border: #333331; --accent: #7aa2ff; --mark: #6b5a12; --chip: #262b36;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 20px; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  .search { position: relative; }
+  input[type=search] { width: 100%; padding: 14px 16px; font-size: 17px; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; outline: none; }
+  input[type=search]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+  .ac { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; list-style: none; margin: 0; padding: 4px;
+        background: var(--surface); border: 1px solid var(--border); border-radius: 10px; display: none; }
+  .ac li { padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+  .ac li.active, .ac li:hover { background: var(--chip); }
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 2px 0; }
+  code { background: var(--chip); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .facets { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 4px; }
+  .chip { border: 1px solid var(--border); background: var(--surface); color: var(--text);
+          padding: 4px 10px; border-radius: 999px; font-size: 13px; cursor: pointer; }
+  .chip[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .meta { color: var(--muted); font-size: 14px; margin: 14px 2px; }
+  .dym a { color: var(--accent); cursor: pointer; font-weight: 600; }
+  .hit { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+  .hit h2 { font-size: 18px; margin: 0 0 4px; }
+  .hit p { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+  .hit .info { margin-top: 8px; font-size: 12.5px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .pager { display: flex; gap: 8px; justify-content: center; margin-top: 18px; }
+  button { font: inherit; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+           padding: 6px 14px; border-radius: 8px; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  details { margin-top: 36px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; }
+  summary { cursor: pointer; font-weight: 600; }
+  form { display: grid; gap: 8px; margin-top: 12px; }
+  form input, form textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text); width: 100%; }
+  .empty { text-align: center; color: var(--muted); padding: 32px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1><span>Nyamka</span> хайлт</h1>
+  <div class="search">
+    <input id="q" type="search" placeholder="Хайх үгээ оруулна уу…" autocomplete="off" autofocus aria-label="Хайлт">
+    <ul id="ac" class="ac" role="listbox"></ul>
+  </div>
+  <p class="hint">
+    <code>"яг хэллэг"</code> хэллэгээр, <code>-үг</code> хасах, <code>title:үг</code> гарчигт хайх.
+    Үгийн эхлэлээр болон үсгийн алдаатай хайлт дэмжинэ.
+  </p>
+  <div id="facets" class="facets"></div>
+  <div id="meta" class="meta"></div>
+  <div id="results"></div>
+  <div id="pager" class="pager"></div>
+
+  <details>
+    <summary>Шинэ баримт нэмэх</summary>
+    <form id="addForm">
+      <input name="title" placeholder="Гарчиг" required>
+      <input name="category" placeholder="Ангилал">
+      <input name="tags" placeholder="Шошго (таслалаар тусгаарлана)">
+      <textarea name="body" rows="5" placeholder="Агуулга" required></textarea>
+      <button type="submit">Нэмэх</button>
+    </form>
+  </details>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const PAGE = 10;
+const state = { q: "", category: "", offset: 0 };
+let acIndex = -1, timer = null, seq = 0;
+
+function el(tag, props = {}, children = []) {
+  const node = Object.assign(document.createElement(tag), props);
+  for (const c of [].concat(children)) node.append(c);
+  return node;
+}
+
+async function search() {
+  const params = new URLSearchParams({ q: state.q, limit: PAGE, offset: state.offset });
+  if (state.category) params.set("category", state.category);
+  const mine = ++seq;
+  const res = await fetch("/api/search?" + params);
+  const data = await res.json();
+  if (mine !== seq) return;  // хуучин хариуг үл тооно
+  render(data);
+}
+
+function render(data) {
+  const results = $("results"), meta = $("meta"), facets = $("facets"), pager = $("pager");
+  results.replaceChildren(); meta.replaceChildren(); facets.replaceChildren(); pager.replaceChildren();
+  if (!state.q.trim() && !state.category) {
+    results.append(el("div", { className: "empty", textContent: "Хайлт хийхийн тулд үг бичнэ үү." }));
+  }
+
+  for (const f of data.facets.category || []) {
+    const active = state.category === f.value;
+    const chip = el("button", { className: "chip", textContent: `${f.value} · ${f.count}` });
+    chip.setAttribute("aria-pressed", active);
+    chip.onclick = () => { state.category = active ? "" : f.value; state.offset = 0; search(); };
+    facets.append(chip);
+  }
+  if (state.category && !(data.facets.category || []).some(f => f.value === state.category)) {
+    const chip = el("button", { className: "chip", textContent: `${state.category} ✕` });
+    chip.setAttribute("aria-pressed", true);
+    chip.onclick = () => { state.category = ""; search(); };
+    facets.append(chip);
+  }
+
+  if (data.suggestion) {
+    const link = el("a", { textContent: data.suggestion });
+    link.onclick = () => { $("q").value = data.suggestion; state.q = data.suggestion; state.offset = 0; search(); };
+    meta.append(el("div", { className: "dym" }, ["Та ", link, " гэж хайсан уу?"]));
+  }
+  if (state.q.trim() || state.category) {
+    let text = `${data.total} үр дүн · ${data.took_ms} мс`;
+    if (data.mode === "or") text += " · бүх үг орсон баримт олдсонгүй, хэсэгчлэн таарсныг харуулав";
+    meta.append(el("div", { textContent: text }));
+    if (!data.total) results.append(el("div", { className: "empty", textContent: "Үр дүн олдсонгүй." }));
+  }
+
+  for (const hit of data.hits) {
+    const doc = hit.document;
+    const title = el("h2"); title.innerHTML = hit.highlights.title || doc.id;  // сервер HTML-escape хийсэн
+    const body = el("p"); body.innerHTML = hit.highlights.body || "";
+    const info = el("div", { className: "info" });
+    if (doc.category) info.append(el("span", { textContent: doc.category }));
+    if (Array.isArray(doc.tags) && doc.tags.length) info.append(el("span", { textContent: "#" + doc.tags.join(" #") }));
+    info.append(el("span", { textContent: "оноо " + hit.score }));
+    results.append(el("article", { className: "hit" }, [title, body, info]));
+  }
+
+  if (data.total > PAGE) {
+    const prev = el("button", { textContent: "← Өмнөх", disabled: state.offset === 0 });
+    const next = el("button", { textContent: "Дараах →", disabled: state.offset + PAGE >= data.total });
+    prev.onclick = () => { state.offset = Math.max(0, state.offset - PAGE); search(); };
+    next.onclick = () => { state.offset += PAGE; search(); };
+    const page = el("span", { className: "meta", textContent: `${Math.floor(state.offset / PAGE) + 1} / ${Math.ceil(data.total / PAGE)}` });
+    pager.append(prev, page, next);
+  }
+}
+
+async function autocomplete(text) {
+  const ac = $("ac");
+  const res = await fetch("/api/autocomplete?" + new URLSearchParams({ q: text }));
+  const { suggestions } = await res.json();
+  ac.replaceChildren(...suggestions.map((s) => {
+    const li = el("li", { textContent: s });
+    li.onmousedown = (e) => { e.preventDefault(); pick(s); };
+    return li;
+  }));
+  acIndex = -1;
+  ac.style.display = suggestions.length && document.activeElement === $("q") ? "block" : "none";
+}
+
+function pick(value) {
+  $("q").value = value; $("ac").style.display = "none";
+  state.q = value; state.offset = 0; search();
+}
+
+$("q").addEventListener("input", (e) => {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    state.q = e.target.value; state.offset = 0;
+    search(); autocomplete(e.target.value);
+  }, 150);
+});
+$("q").addEventListener("keydown", (e) => {
+  const items = [...$("ac").children];
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (!items.length) return;
+    e.preventDefault();
+    acIndex = (acIndex + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    items.forEach((li, i) => li.classList.toggle("active", i === acIndex));
+  } else if (e.key === "Enter") {
+    if (acIndex >= 0 && items[acIndex]) pick(items[acIndex].textContent);
+    else { $("ac").style.display = "none"; state.q = e.target.value; state.offset = 0; search(); }
+  } else if (e.key === "Escape") {
+    $("ac").style.display = "none";
+  }
+});
+$("q").addEventListener("blur", () => { $("ac").style.display = "none"; });
+
+$("addForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const doc = {
+    title: f.get("title"), body: f.get("body"), category: f.get("category"),
+    tags: f.get("tags").split(",").map((t) => t.trim()).filter(Boolean),
+  };
+  const res = await fetch("/api/documents", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(doc),
+  });
+  if (res.ok) { e.target.reset(); search(); alert("Баримт нэмэгдлээ."); }
+  else alert("Алдаа: " + (await res.json()).error);
+});
+
+search();
+</script>
+</body>
+</html>
