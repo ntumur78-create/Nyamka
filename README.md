@@ -83,3 +83,7 @@ tests/           unittest
 ```bash
 python3 -m unittest discover -s tests -t .
 ```
+
+## Бусад ажил / Other work
+
+- [Erdős Problem #835: k = 10, 12 settled](erdos-835/README.md)
